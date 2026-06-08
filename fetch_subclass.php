@@ -9,29 +9,42 @@ class Fetch_Subclass extends Fetch_Bookmarker
         parent::__construct($url);
         $this->response_sent = $this->fetch();
 
-        echo $this->response_sent;
-        die();
-
         if(!empty($this->response_sent))
         {
             $this->parsed_response = $this->parse( $this->response_sent );
         } else {
             echo "response_sent_null";
-            return false;
+        }
+
+        if(!empty($this->parsed_response))
+        {
+            echo $this->parsed_response;
+            die();
         }
     }
 
-    public function return() {
-        return $this->parsed_response;
-    }
-
-    public function fetch()
+    public function fetch() 
     {
-        $command = 'curl -L -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136.0.0.0 Safari/537.36" ' . $this->bookmarker_url;
 
-        $html = shell_exec($command);
+        $response = wp_remote_get(
+            $this->bookmarker_url,
+            array(
+                'timeout' => 60,
+                'user-agent' => 'Mozilla/5.0',
+                'headers' => [
+                    'Cookie' => 'cookie_consent=true'
+                ]
+            )
+        );
 
-        return $html;
+        if ( is_wp_error( $response ) ) {
+            return false;
+        }
+
+        print_r(wp_remote_retrieve_body( $response ));
+        die();
+
+        return wp_remote_retrieve_body( $response );
     }
 
     public function parse( $html ) {
@@ -47,18 +60,13 @@ class Fetch_Subclass extends Fetch_Bookmarker
             "//div[contains(@class,'matchup-odds-comparison-card')]"
         );
 
-        $output = [];
+        $output = "";
         foreach ( $nodes as $node ) {
-            $output[] = str_replace('\\n', '', str_replace('\\r', '', str_replace('\\r\\n', '', trim( $node->textContent ))));
+            $output .= trim( $node->textContent );
         }
 
         return $output;
     }
 }
 
-$fetch = new Fetch_Subclass('https://oddspedia.com');
-$parsed_output = $fetch->return();
-
-echo "<pre>";
-print_r($parsed_output);
-die();
+$fetch = new Fetch_Subclass('https://oddsportal.com/football/h2h/athletico-pr-UoAxb1Tq/sao-paulo-QgP0oAUH/#0EJZvDKP:1X2;4');
